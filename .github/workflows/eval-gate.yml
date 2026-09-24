@@ -9,8 +9,16 @@ jobs:
   # Fast, free, deterministic: tests the agent's control flow (triage
   # branching, retry loops, groundedness gate) with mock LLM + embeddings.
   # No API key required — this runs on every push and every fork's PRs.
+  #
+  # It also checks whether GROQ_API_KEY has been added as a repo secret and
+  # publishes that as a job output. `secrets` can't be read directly inside
+  # a job-level `if:` (GitHub restricts that context there) — checking it
+  # inside a step, then passing the result via `outputs`, is the standard
+  # workaround.
   unit-tests:
     runs-on: ubuntu-latest
+    outputs:
+      has_groq_key: ${{ steps.check-secret.outputs.has_groq_key }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -18,6 +26,11 @@ jobs:
           python-version: "3.11"
       - run: pip install -r requirements.txt
       - run: pytest tests/ -v
+      - name: Check for GROQ_API_KEY secret
+        id: check-secret
+        env:
+          GROQ_KEY_PRESENT: ${{ secrets.GROQ_API_KEY != '' }}
+        run: echo "has_groq_key=$GROQ_KEY_PRESENT" >> "$GITHUB_OUTPUT"
 
   # The real eval gate: builds the vector index, runs every synthetic
   # scenario against the live Groq model, and fails the build if
@@ -28,7 +41,7 @@ jobs:
   live-eval-gate:
     needs: unit-tests
     runs-on: ubuntu-latest
-    if: ${{ secrets.GROQ_API_KEY != '' }}
+    if: needs.unit-tests.outputs.has_groq_key == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
