@@ -1,5 +1,8 @@
 # Clinical protocol agent (portfolio project)
 
+[![eval-gate](https://github.com/kr-bharath/CLINICAL_AGENT/actions/workflows/eval-gate.yml/badge.svg)](https://github.com/kr-bharath/CLINICAL_AGENT/actions/workflows/eval-gate.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A symptom-to-protocol assistant for **diabetes and hypertension**, built as an
 *agent* rather than a single-shot RAG pipeline: it can retry a weak
 retrieval, refuse to answer when its own draft isn't grounded in the
@@ -9,6 +12,10 @@ clinician instead of guessing.
 **This is a portfolio / research demo. It runs only on synthetic scenarios,
 never real patient data, and its output is not a diagnosis or a substitute
 for a qualified clinician.**
+
+📄 **[Full project FAQ](PROJECT_FAQ.md)** — architecture walkthrough, every
+real bug hit during development and how it was fixed, eval numbers
+explained, honest limitations, and an interview-prep Q&A section.
 
 ## Why an agent, not a RAG pipeline
 
@@ -135,6 +142,8 @@ same — they operate on whatever's in `data/guidelines/`.
 ## Project layout
 
 ```
+LICENSE                  MIT
+PROJECT_FAQ.md           architecture, real bugs found, eval numbers, interview Q&A
 data/guidelines/*.md     structured guideline excerpts (source + citation in frontmatter)
 src/config.py            every threshold the control flow depends on
 src/llm_client.py        Groq -> Gemini fallback, or a mock backend for tests
