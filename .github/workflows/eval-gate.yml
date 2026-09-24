@@ -1,0 +1,49 @@
+name: eval-gate
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # Fast, free, deterministic: tests the agent's control flow (triage
+  # branching, retry loops, groundedness gate) with mock LLM + embeddings.
+  # No API key required — this runs on every push and every fork's PRs.
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - run: pytest tests/ -v
+
+  # The real eval gate: builds the vector index, runs every synthetic
+  # scenario against the live Groq model, and fails the build if
+  # escalation accuracy, retrieval hit-rate, or groundedness drop below
+  # the thresholds in src/config.py. Only runs when a free Groq key has
+  # been added as a repo secret (Settings -> Secrets and variables ->
+  # Actions -> New repository secret -> GROQ_API_KEY).
+  live-eval-gate:
+    needs: unit-tests
+    runs-on: ubuntu-latest
+    if: ${{ secrets.GROQ_API_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Build vector index
+        run: python -m src.ingest
+      - name: Run live eval gate
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python -m src.eval_harness --live
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-report
+          path: eval_report.json
